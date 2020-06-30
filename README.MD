@@ -1,3 +1,13 @@
+# Запуск
+Для запуска нужно установить [docker](https://docs.docker.com/get-docker/) и [docker-compose](https://docs.docker.com/compose/install/)
+
+И віполнить в папке с файлом `docker-compose.yml`:
+```bash
+docker-compose up
+```
+Или запускать на локальном сервере как раньше, конфиги в папке .deploy
+Дамп бд тоже там
+
 # Backend PHP | Full stack dev test task v2
 
 **`Перед началом выполнения задания внимательно прочтите этот текст!`**
