@@ -1,9 +1,11 @@
 .idea/*
-.DS_Store
-.DS_Store?
+        .DS_Store
+        .DS_Store?
 
-application/cache/*
+        application/cache/*
 #/application/config/development/*
 
 .deploy/mysql/data/
 tags
+logs/
+application/cache/session/my_session*

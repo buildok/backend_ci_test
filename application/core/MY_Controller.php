@@ -13,6 +13,33 @@ class MY_Controller extends CI_Controller
         parent::__construct();
     }
 
+    /**
+     * Returns request payload
+     * @return object stdClass
+     */
+    protected function payload() : stdClass
+    {
+        $payload = json_decode(App::get_ci()->input->raw_input_stream) ?? new stdClass;
+        return $payload;
+    }
+
+    /**
+     * Check required fields
+     * @param $payload object
+     * @param $required array
+     * @return bool
+     */
+    protected function validate(object $payload, array $required) : bool
+    {
+        foreach ($required as $field) {
+            if (!property_exists($payload, $field)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function __destruct()
     {
 

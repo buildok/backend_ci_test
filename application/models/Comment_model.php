@@ -10,6 +10,8 @@ class Comment_model extends CI_Emerald_Model
 {
     const CLASS_TABLE = 'comment';
 
+    /** @var int Parent comment id */
+    protected $parent_id;
 
     /** @var int */
     protected $user_id;
@@ -28,7 +30,10 @@ class Comment_model extends CI_Emerald_Model
     protected $likes;
     protected $user;
 
-
+    public function get_parent_id()
+    {
+        return $this->parent_id;
+    }
     /**
      * @return int
      */
@@ -51,20 +56,19 @@ class Comment_model extends CI_Emerald_Model
     /**
      * @return int
      */
-    public function get_assing_id(): int
+    public function get_assign_id(): int
     {
-        return $this->assing_id;
+        return (int)$this->assign_id;
     }
-
     /**
      * @param int $assing_id
      *
      * @return bool
      */
-    public function set_assing_id(int $assing_id)
+    public function set_assign_id(int $assign_id)
     {
-        $this->assing_id = $assing_id;
-        return $this->save('assing_id', $assing_id);
+        $this->assign_id = $assign_id;
+        return $this->save('assign_id', $assign_id);
     }
 
 
@@ -133,6 +137,22 @@ class Comment_model extends CI_Emerald_Model
      */
     public function get_likes()
     {
+        return $this->likes;
+    }
+
+    /**
+     * Increases likes
+     * @return int New value
+     */
+    public function like(): int
+    {
+        $this->save('likes', ++$this->likes);
+        return $this->likes;
+    }
+
+    public function dislike(): int
+    {
+        // has no effect
         return $this->likes;
     }
 
@@ -218,10 +238,10 @@ class Comment_model extends CI_Emerald_Model
     {
         switch ($preparation)
         {
-            case 'full_info':
-                return self::_preparation_full_info($data);
-            default:
-                throw new Exception('undefined preparation type');
+        case 'full_info':
+            return self::_preparation_full_info($data);
+        default:
+            throw new Exception('undefined preparation type');
         }
     }
 
@@ -238,11 +258,13 @@ class Comment_model extends CI_Emerald_Model
             $o = new stdClass();
 
             $o->id = $d->get_id();
+            $o->assignId = $d->get_assign_id();
+            $o->parentId = $d->get_parent_id();
             $o->text = $d->get_text();
 
             $o->user = User_model::preparation($d->get_user(),'main_page');
 
-            $o->likes = rand(0, 25);
+            $o->likes = $d->get_likes();
 
             $o->time_created = $d->get_time_created();
             $o->time_updated = $d->get_time_updated();

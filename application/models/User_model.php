@@ -32,6 +32,8 @@ class User_model extends CI_Emerald_Model {
     protected $time_created;
     /** @var string */
     protected $time_updated;
+    /** @var int */
+    protected $likes_balance;
 
 
     private static $_current_user;
@@ -226,6 +228,71 @@ class User_model extends CI_Emerald_Model {
         return $this->save('time_updated', $time_updated);
     }
 
+    public function getLikes()
+    {
+        return $this->likes_balance;
+    }
+
+    /**
+     * Decreases count of likes
+     * @return bool
+     */
+    public function applyLike(): bool
+    {
+        if ($this->likes_balance > 0) {
+            return (bool)$this->save('likes_balance', --$this->likes_balance);
+        }
+
+        return false;
+    }
+
+    /**
+     * Add money to balance
+     * @param $amount float
+     * @return bool
+     */
+    public function deposit($amount): bool
+    {
+        $sql = 'CALL deposit(?, ?)';
+
+        $db = App::get_ci()->s->getDb();
+        $stmt = $db->prepare($sql);
+        $stmt->bind_param('id', $this->id, $amount);
+
+        if ($ret = $stmt->execute()) {
+            $this->wallet_balance += $amount;
+            $this->wallet_total_refilled += $amount;
+        } else {
+            error_log("{$db->error} SQL:$sql PARAMS:{$this->id}, $amount");
+        }
+
+        return $ret;
+    }
+
+    /**
+     * Buy boosterpack
+     * @param $bp object Boosterpack_model
+     * @return bool
+     */
+    public function buyBoosterpack(Boosterpack_model $bp): bool
+    {
+        $sql = 'CALL buy_boosterpack(?, ?, ?)';
+
+        $db = App::get_ci()->s->getDb();
+        $stmt = $db->prepare($sql);
+
+        $bp->open();
+        $stmt->bind_param('iii', $this->id, $bp->get_id(), $bp->get_likes());
+
+        if ($ret = $stmt->execute()) {
+            $this->wallet_balance -= $bp->get_price();
+            $this->likes_balance += $bp->get_likes();
+        } else {
+            error_log("{$db->error} SQL:$sql PARAMS:{$this->id}, {$bp->get_id()}, {$bp->get_likes()}");
+        }
+
+        return $ret;
+    }
 
     function __construct($id = NULL)
     {
@@ -269,6 +336,12 @@ class User_model extends CI_Emerald_Model {
         return $ret;
     }
 
+    public static function findByLogin($email, $password)
+    {
+        $data = App::get_ci()->s->from(self::CLASS_TABLE)->where(['email' => $email, 'password' => $password])->one();
+        return (new self())->set($data);
+    }
+
 
     /**
      * @param User_model|User_model[] $data
@@ -280,12 +353,12 @@ class User_model extends CI_Emerald_Model {
     {
         switch ($preparation)
         {
-            case 'main_page':
-                return self::_preparation_main_page($data);
-            case 'default':
-                return self::_preparation_default($data);
-            default:
-                throw new Exception('undefined preparation type');
+        case 'main_page':
+            return self::_preparation_main_page($data);
+        case 'default':
+            return self::_preparation_default($data);
+        default:
+            throw new Exception('undefined preparation type');
         }
     }
 
@@ -317,7 +390,6 @@ class User_model extends CI_Emerald_Model {
     private static function _preparation_default($data)
     {
         $o = new stdClass();
-
         if (!$data->is_loaded())
         {
             $o->id = NULL;

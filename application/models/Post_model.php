@@ -136,6 +136,16 @@ class Post_model extends CI_Emerald_Model
     }
 
     /**
+     * Increases likes
+     * @return int New value
+     */
+    public function like(): int
+    {
+        $this->save('likes', ++$this->likes);
+        return $this->likes;
+    }
+
+    /**
      * @return Comment_model[]
      */
     public function get_comments()
@@ -224,12 +234,12 @@ class Post_model extends CI_Emerald_Model
     {
         switch ($preparation)
         {
-            case 'main_page':
-                return self::_preparation_main_page($data);
-            case 'full_info':
-                return self::_preparation_full_info($data);
-            default:
-                throw new Exception('undefined preparation type');
+        case 'main_page':
+            return self::_preparation_main_page($data);
+        case 'full_info':
+            return self::_preparation_full_info($data);
+        default:
+            throw new Exception('undefined preparation type');
         }
     }
 
@@ -248,7 +258,6 @@ class Post_model extends CI_Emerald_Model
             $o->img = $d->get_img();
 
             $o->text = $d->get_text();
-
             $o->user = User_model::preparation($d->get_user(),'main_page');
 
             $o->time_created = $d->get_time_created();
@@ -275,12 +284,12 @@ class Post_model extends CI_Emerald_Model
         $o->img = $data->get_img();
 
 
-//            var_dump($d->get_user()->object_beautify()); die();
+        //            var_dump($d->get_user()->object_beautify()); die();
 
         $o->user = User_model::preparation($data->get_user(),'main_page');
         $o->coments = Comment_model::preparation($data->get_comments(),'full_info');
 
-        $o->likes = rand(0, 25);
+        $o->likes = $data->get_likes();
 
 
         $o->time_created = $data->get_time_created();

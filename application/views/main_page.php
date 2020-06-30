@@ -31,6 +31,9 @@
                       data-target="#addModal">Add balance
               </button>
             </li>
+
+            <li class="nav-item"><User/></li>
+            <li class="nav-item"><button class="btn btn-success" type="submit" data-toggle="modal" data-target="#accountModal" @click="openAccount">Account</button></li>
         <?php else: ?>
             <button type="button" class="btn btn-success my-2 my-sm-0" type="submit" data-toggle="modal"
                       data-target="#loginModal">Log IN
@@ -99,10 +102,10 @@
         <div class="modal-body">
           <form>
             <div class="form-group">
-              <label for="exampleInputEmail1">Please enter login</label>
+              <label for="exampleInputEmail1">Please enter email</label>
               <input type="email" class="form-control" id="inputEmail" aria-describedby="emailHelp" v-model="login" required>
               <div class="invalid-feedback" v-if="invalidLogin">
-                Please write a username.
+                Please write an email.
               </div>
             </div>
             <div class="form-group">
@@ -110,6 +113,9 @@
               <input type="password" class="form-control" id="inputPassword" v-model="pass" required>
               <div class="invalid-feedback" v-show="invalidPass">
                 Please write a password.
+              </div>
+              <div class="invalid-feedback" v-show="loginError">
+                {{errorMsg}}
               </div>
             </div>
           </form>
@@ -141,7 +147,7 @@
             <div class="post-img" v-bind:style="{ backgroundImage: 'url(' + post.img + ')' }"></div>
             <div class="card-body">
               <div class="likes" @click="addLike(post.id)">
-                <div class="heart-wrap" v-if="!likes">
+                <div class="heart-wrap" v-if="!liked">
                   <div class="heart">
                     <svg class="bi bi-heart" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path fill-rule="evenodd" d="M8 2.748l-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 01.176-.17C12.72-3.042 23.333 4.867 8 15z" clip-rule="evenodd"/>
@@ -155,15 +161,29 @@
                       <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" clip-rule="evenodd"/>
                     </svg>
                   </div>
-                  <span>{{likes}}</span>
+                  <span>{{post.likes}}</span>
                 </div>
               </div>
-              <p class="card-text" v-for="comment in post.coments"> {{comment.user.personaname + ' - '}}<small class="text-muted">{{comment.text}}</small></p>
+              <div class="invalid-feedback" v-if="likeError">{{errorMsg}}</div>
+            <div>
+                <Comment v-for="comment in post.coments.filter(c => c.parentId == 0)"
+                    :key="comment.id"
+                    v-bind:id="comment.id"
+                    v-bind:assign-id="comment.assignId"
+                    v-bind:parent-id="comment.parentId"
+                    v-bind:text="comment.text"
+                    v-bind:author="comment.user.personaname"
+                    v-bind:likes="comment.likes"/>
+            </div>
+
               <form class="form-inline">
                 <div class="form-group">
                   <input type="text" class="form-control" id="addComment" v-model="commentText">
                 </div>
-                <button type="submit" class="btn btn-primary">Add comment</button>
+                <button class="btn btn-primary" @click.prevent="addComment(post.id)">Add comment</button>
+                <div class="invalid-feedback" v-show="commentError">
+                    {{errorMsg}}
+                </div>
               </form>
             </div>
           </div>
@@ -190,9 +210,7 @@
             <div class="form-group">
               <label for="exampleInputEmail1">Enter sum</label>
               <input type="text" class="form-control" id="addBalance" v-model="addSum" required>
-              <div class="invalid-feedback" v-if="invalidSum">
-                Please write a sum.
-              </div>
+              <div class="invalid-feedback" v-if="invalidSum">{{errorMsg}}</div>
             </div>
           </form>
         </div>
@@ -216,6 +234,78 @@
         <div class="modal-body">
           <h2 class="text-center">Likes: {{amount}}</h2>
         </div>
+        <div class="invalid-feedback center" v-if="buypackError">{{errorMsg}}</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" data-dismiss="modal">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="accountModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Account</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <ul class="nav nav-tabs">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#transactions">Transactions</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#summary">Summary</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#boosterpacks">Boosterpacks</a></li>
+            </ul>
+            <div class="tab-content account">
+                <div class="tab-pane fade show active" id="transactions">
+                    <div class="transactions">
+                        <div class="invalid-feedback center" v-if="txError">{{errorMsg}}</div>
+                        <div style="font-weight: 600">
+                            <span style="margin-left:10px">ID</span> 
+                            <span style="margin-left:60px">Type</span> 
+                            <span style="margin-left:75px">Amount</span> 
+                            <span style="margin-left:90px">Date</span>
+                        </div>
+                        <hr />
+                        <Transaction v-for="tx in transactions"
+                            :key="tx.id"
+                            v-bind:id="tx.id"
+                            v-bind:amount="tx.amount"
+                            v-bind:type="tx.type"
+                            v-bind:date="tx.created_at"/>
+                            
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="summary">
+                    <div class="summary">
+                        <p>Total refilled:<span>${{totalDeposit}}</span></p>
+                        <p>Total withdrawn:<span>${{totalWithdraw}}</span></p>
+                        <p>Balance:<span>${{balance}}</span></p>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="boosterpacks">
+                    <div class="boosterpacks">
+                        <div class="invalid-feedback center" v-if="orderError">{{errorMsg}}</div>
+                        <div style="font-weight: 600">
+                            <span style="margin-left:5px">ID</span> 
+                            <span style="margin-left:90px">Price</span> 
+                            <span style="margin-left:60px">Likes</span> 
+                            <span style="margin-left:90px">Date</span>
+                        </div>
+                        <hr />
+                        <Order v-for="order in orders"
+                            :key="order.id"
+                            v-bind:id="order.id"
+                            v-bind:price="order.price"
+                            v-bind:likes="order.likes"
+                            v-bind:date="order.created_at"/>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-success" data-dismiss="modal">Ok</button>
         </div>
@@ -223,6 +313,7 @@
     </div>
   </div>
 </div>
+
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
         integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
@@ -233,8 +324,73 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
         integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
         crossorigin="anonymous"></script>
+
+<script type="text/x-template" id="comment-template">
+<div>
+    <div class="card-text">
+        <span class="btn btn-secondary" @click.prevent="toggle()">[{{isOpen ? '-' : '+'}}]</span>{{author + ' - '}}<small class="text-muted">{{text}}</small>
+        <div class="heart-wrap" @click="like()">
+            <div class="heart">
+                <svg v-if="liked" class="bi bi-heart-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" clip-rule="evenodd"/>
+                </svg>      
+                <svg v-else class="bi bi-heart" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 2.748l-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 01.176-.17C12.72-3.042 23.333 4.867 8 15z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <span>{{likesCount}}</span>
+        </div>
+    </div>
+    <div class="invalid-feedback" v-if="likeError">{{errorMsg}}</div>
+    <div class="discuss-box" v-if="isOpen">
+        <form class="form-inline">
+            <div class="form-group">
+                <input type="text" class="form-control" id="reply" v-model="replyText">
+            </div>
+            <button class="btn btn-primary" @click.prevent="reply(id)">Reply</button>
+            <div class="invalid-feedback" v-show="replyError">
+                {{errorMsg}}
+            </div>
+        </form>
+        <div class="replies">
+            <Comment v-for="comment in replies"
+                :key="comment.id"
+                v-bind:id="comment.id"
+                v-bind:assign-id="comment.assignId"
+                v-bind:parent-id="comment.parentId"
+                v-bind:text="comment.text"
+                v-bind:author="comment.user.personaname"
+                v-bind:likes="comment.likes"/>
+        </div>
+    </div>
+</div>
+</script>
+<script type="text/x-template" id="user-template">
+<div class="account-header" v-if="!isGuest">
+    <div class="balance">${{balance}}</div>
+    <div class="heart">
+        <svg class="bi bi-heart" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M8 2.748l-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 01.176-.17C12.72-3.042 23.333 4.867 8 15z" clip-rule="evenodd"/>
+        </svg>{{likes}}
+    </div>
+</div>
+</script>
+<script type="text/x-template" id="transaction-template">
+<div class="account-list-item">
+    <span class="tx-id">{{id}}</span>
+    <span class="tx-type">{{type}}</span>
+    <span class="tx-amount">{{amount}}$</span>
+    <span>{{date}}</span>
+</div>
+</script>
+<script type="text/x-template" id="order-template">
+<div class="account-list-item">
+    <span class="order-id">{{id}}</span>
+    <span class="order-price">{{price}}$</span>
+    <span class="order-likes">{{likes}}</span>
+    <span>{{date}}</span>
+</div>
+</script>
 <script src="/js/app.js?v=<?= filemtime(FCPATH . '/js/app.js') ?>"></script>
 </body>
 </html>
-
-
